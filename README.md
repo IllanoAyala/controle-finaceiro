@@ -2,6 +2,14 @@
 
 Aplicação desktop para controle de finanças pessoais, desenvolvida em Python com Tkinter e SQLite.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshot_lancamentos.png" width="48%" alt="Aba Lançamentos"/>
+  &nbsp;
+  <img src="assets/screenshot_cartoes.png" width="48%" alt="Aba Cartões de Crédito"/>
+</p>
+
 ## Funcionalidades
 
 - **Lançamentos** — registre receitas e despesas com categoria, data e valor
@@ -17,6 +25,7 @@ controle-financeiro/
 ├── main.py               # Ponto de entrada
 ├── database.py           # Camada de dados (SQLite)
 ├── constants.py          # Categorias, meses, temas e cores
+├── assets/               # Screenshots e recursos
 ├── ui/
 │   ├── app.py            # Classe principal App (tema, interface)
 │   ├── aba_lancamentos.py # Aba de lançamentos
@@ -52,5 +61,3 @@ Os dados são armazenados em SQLite (`controle_financeiro.db`). Para visualizar 
 | `cartoes` | Cartões cadastrados |
 | `gastos_cartao` | Gastos individuais por cartão |
 | `faturas_futuras` | Parcelas e faturas futuras por cartão |
-
-
