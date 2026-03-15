@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import webbrowser
+import os
 
 from constants import TEMAS
 from database import init_db
@@ -18,8 +19,11 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes):
         self.configure(bg=self.BG if hasattr(self, "BG") else "#0a0a0a")
         self.resizable(True, True)
         try:
-            _ico = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icone.ico")
-            self.iconbitmap(default=_ico)
+            import sys
+            _root = sys.path[0]  # raiz definida pelo main.py
+            _ico = os.path.join(_root, "icone.ico")
+            if os.path.exists(_ico):
+                self.iconbitmap(default=_ico)
         except:
             pass
         init_db()
