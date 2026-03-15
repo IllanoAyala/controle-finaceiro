@@ -1,0 +1,8 @@
+# Controle Financeiro — dependências
+# Todas as bibliotecas usadas já vêm incluídas no Python padrão:
+# - tkinter (interface gráfica)
+# - sqlite3 (banco de dados)
+# - datetime, os, json, re (utilitários)
+
+# Nenhuma instalação adicional necessária.
+# Requer Python 3.8+
