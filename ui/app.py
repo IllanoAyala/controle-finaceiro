@@ -7,10 +7,11 @@ from constants import TEMAS
 from database import init_db
 from ui.aba_lancamentos import AbaLancamentos
 from ui.aba_cartoes import AbaCartoes
+from ui.aba_analises import AbaAnalises
 from ui.widgets import entry_widget, btn
 
 
-class App(tk.Tk, AbaLancamentos, AbaCartoes):
+class App(tk.Tk, AbaLancamentos, AbaCartoes, AbaAnalises):
 
     def __init__(self):
         super().__init__()
@@ -136,7 +137,7 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes):
                          'tree_faturas', 'frame_cards_cartoes', 'fat_cards_frame',
                          'card_fatura_total', 'card_proximas', 'card_limite_total', 'card_terceiros',
                          'card_disponivel', 'frame_btns_cartoes', '_fat_canvas',
-                         '_cartao_idx_sel', '_btn_tema']:
+                         '_cartao_idx_sel', '_btn_tema', '_analise_mes', '_analises_frame', '_analises_win', '_tab_lines']:
                 if hasattr(self, attr):
                     delattr(self, attr)
             for w in self.winfo_children():
@@ -157,8 +158,16 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes):
                                    cursor="hand2", padx=10, pady=4,
                                    activebackground=self.BORDA, activeforeground=self.FG)
         self._btn_tema.pack(side="right")
-        tab_bar = tk.Frame(self, bg=self.BG)
-        tab_bar.pack(fill="x", padx=24)
+        # Tab bar com linha inferior no ativo
+        tab_bar_outer = tk.Frame(self, bg=self.BG)
+        tab_bar_outer.pack(fill="x", padx=24, pady=(0, 4))
+        tab_bar = tk.Frame(tab_bar_outer, bg=self.BG)
+        tab_bar.pack(fill="x")
+        tab_bar.columnconfigure(0, weight=1)
+        tab_bar.columnconfigure(1, weight=1)
+        tab_bar.columnconfigure(2, weight=1)
+        # Linha separadora na base
+        tk.Frame(tab_bar_outer, bg=self.BORDA, height=1).pack(fill="x")
         self.aba_atual = tk.IntVar(value=0)
         self._tab_btns = []
         self._abas = []
@@ -186,7 +195,8 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes):
         nome.bind("<Leave>",    lambda e: nome.config(fg=self.FG))
         aba1 = ttk.Frame(container, style="TFrame", padding=(0, 12, 0, 0))
         aba2 = ttk.Frame(container, style="TFrame", padding=(0, 12, 0, 0))
-        self._abas = [aba1, aba2]
+        aba3 = ttk.Frame(container, style="TFrame", padding=(0, 12, 0, 0))
+        self._abas = [aba1, aba2, aba3]
 
         def trocar_aba(idx):
             self.aba_atual.set(idx)
@@ -195,25 +205,41 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes):
                     frame.place(relx=0, rely=0, relwidth=1, relheight=1)
                 else:
                     frame.place_forget()
-            for i, btn in enumerate(self._tab_btns):
+            for i, b in enumerate(self._tab_btns):
                 if i == idx:
-                    btn.config(bg=self.BG, fg=self.FG)
+                    b.config(bg=self.BG, fg=self.FG,
+                             font=("Segoe UI", 10, "bold"),
+                             relief="flat", bd=0)
+                    # Linha inferior ativa
+                    self._tab_lines[i].config(bg=self.FG)
                 else:
-                    btn.config(bg=self.CARD, fg=self.FG2)
+                    b.config(bg=self.BG, fg=self.FG2,
+                             font=("Segoe UI", 10),
+                             relief="flat", bd=0)
+                    self._tab_lines[i].config(bg=self.BG)
 
-        for i, label in enumerate(["  📋  Lançamentos  ", "  💳  Cartões de Crédito  "]):
-            btn = tk.Button(tab_bar, text=label, font=("Segoe UI", 10), relief="flat",
-                           bd=0, highlightthickness=0, cursor="hand2", padx=16, pady=8,
-                           activebackground=self.BG, activeforeground=self.FG,
-                           command=lambda i=i: trocar_aba(i))
-            btn.pack(side="left")
-            self._tab_btns.append(btn)
+        self._tab_lines = []
+        for i, label in enumerate(["  📋  Lançamentos  ", "  💳  Cartões de Crédito  ", "  📊  Análises  "]):
+            cell = tk.Frame(tab_bar, bg=self.BG)
+            cell.grid(row=0, column=i, sticky="ew")
+            b = tk.Button(cell, text=label, font=("Segoe UI", 10),
+                          relief="flat", bd=0, highlightthickness=0,
+                          cursor="hand2", pady=10,
+                          bg=self.BG, fg=self.FG2,
+                          activebackground=self.BG, activeforeground=self.FG,
+                          command=lambda i=i: trocar_aba(i))
+            b.pack(fill="x")
+            line = tk.Frame(cell, bg=self.BG, height=2)
+            line.pack(fill="x")
+            self._tab_btns.append(b)
+            self._tab_lines.append(line)
 
         container.update_idletasks()
         for frame in self._abas:
             frame.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._construir_aba_lancamentos(aba1)
         self._construir_aba_cartoes(aba2)
+        self._construir_aba_analises(aba3)
         trocar_aba(0)
 
     # ══════════════════════════════════════════════════════════════════════════

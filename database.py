@@ -23,13 +23,16 @@ def init_db():
             despesa   REAL NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS cartoes (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome       TEXT NOT NULL UNIQUE,
-            limite     REAL NOT NULL DEFAULT 0,
-            fatura     REAL NOT NULL DEFAULT 0,
-            vencimento INTEGER NOT NULL DEFAULT 0,
-            terceiro   INTEGER NOT NULL DEFAULT 0
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome        TEXT NOT NULL UNIQUE,
+            limite      REAL NOT NULL DEFAULT 0,
+            fatura      REAL NOT NULL DEFAULT 0,
+            vencimento  INTEGER NOT NULL DEFAULT 0,
+            terceiro    INTEGER NOT NULL DEFAULT 0,
+            mes_fatura  TEXT NOT NULL DEFAULT ""
         );
+        -- Adiciona coluna mes_fatura se ja nao existir (migracao)
+        CREATE TABLE IF NOT EXISTS _cartoes_migration_check (id INTEGER);
         CREATE TABLE IF NOT EXISTS gastos_cartao (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
             cartao_id INTEGER NOT NULL REFERENCES cartoes(id) ON DELETE CASCADE,
@@ -47,6 +50,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    migrar_mes_fatura()
 
 
 # ── Lançamentos ───────────────────────────────────────────────────────────────
@@ -120,10 +124,10 @@ def editar_lancamento_db(lanc_id, data, descricao, tipo, categoria, valor):
 def carregar_cartoes():
     conn = get_conn()
     cartoes_rows = conn.execute(
-        "SELECT id, nome, limite, fatura, vencimento, terceiro FROM cartoes"
+        "SELECT id, nome, limite, fatura, vencimento, terceiro, mes_fatura FROM cartoes"
     ).fetchall()
     result = []
-    for cid, nome, limite, fatura, venc, terceiro in cartoes_rows:
+    for cid, nome, limite, fatura, venc, terceiro, mes_fatura in cartoes_rows:
         gastos = [
             {"desc": g[0], "valor": g[1], "data": g[2]}
             for g in conn.execute(
@@ -138,7 +142,7 @@ def carregar_cartoes():
         ]
         result.append({
             "id": cid, "nome": nome, "limite": limite, "fatura": fatura,
-            "vencimento": venc, "terceiro": bool(terceiro),
+            "vencimento": venc, "terceiro": bool(terceiro), "mes_fatura": mes_fatura or "",
             "gastos": gastos, "faturas": faturas,
         })
     conn.close()
@@ -151,17 +155,17 @@ def salvar_cartoes(cartoes):
         cid = c.get("id")
         if cid:
             conn.execute(
-                "UPDATE cartoes SET nome=?, limite=?, fatura=?, vencimento=?, terceiro=? WHERE id=?",
+                "UPDATE cartoes SET nome=?, limite=?, fatura=?, vencimento=?, terceiro=?, mes_fatura=? WHERE id=?",
                 (c["nome"], c["limite"], c["fatura"], c["vencimento"],
-                 1 if c.get("terceiro") else 0, cid),
+                 1 if c.get("terceiro") else 0, c.get("mes_fatura", ""), cid),
             )
             conn.execute("DELETE FROM gastos_cartao WHERE cartao_id=?", (cid,))
             conn.execute("DELETE FROM faturas_futuras WHERE cartao_id=?", (cid,))
         else:
             cur = conn.execute(
-                "INSERT INTO cartoes (nome, limite, fatura, vencimento, terceiro) VALUES (?,?,?,?,?)",
+                "INSERT INTO cartoes (nome, limite, fatura, vencimento, terceiro, mes_fatura) VALUES (?,?,?,?,?,?)",
                 (c["nome"], c["limite"], c["fatura"], c["vencimento"],
-                 1 if c.get("terceiro") else 0),
+                 1 if c.get("terceiro") else 0, c.get("mes_fatura", "")),
             )
             cid = cur.lastrowid
             c["id"] = cid
@@ -196,4 +200,15 @@ def remover_cartao_db(cartao_id):
     conn = get_conn()
     conn.execute("DELETE FROM cartoes WHERE id=?", (cartao_id,))
     conn.commit()
+    conn.close()
+
+
+def migrar_mes_fatura():
+    """Adiciona coluna mes_fatura se não existir (migração segura)."""
+    conn = get_conn()
+    try:
+        conn.execute("ALTER TABLE cartoes ADD COLUMN mes_fatura TEXT NOT NULL DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass  # coluna já existe
     conn.close()

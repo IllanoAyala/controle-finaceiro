@@ -334,6 +334,8 @@ class AbaCartoes:
             for c in cartoes:
                 if c["nome"] == nome:
                     c["fatura"] = c.get("fatura", 0) + parcela
+                    if not c.get("mes_fatura"):
+                        c["mes_fatura"] = str(hoje.month).zfill(2) + "/" + str(hoje.year)
                     if "gastos" not in c:
                         c["gastos"] = []
                     c["gastos"].append({"desc": desc + " (1/" + str(n) + ")", "valor": parcela,
@@ -356,6 +358,9 @@ class AbaCartoes:
             for c in cartoes:
                 if c["nome"] == nome:
                     c["fatura"] = c.get("fatura", 0) + valor
+                    if not c.get("mes_fatura"):
+                        hoje = date.today()
+                        c["mes_fatura"] = str(hoje.month).zfill(2) + "/" + str(hoje.year)
                     if "gastos" not in c:
                         c["gastos"] = []
                     c["gastos"].append({"desc": desc, "valor": valor,
@@ -423,6 +428,7 @@ class AbaCartoes:
             faturas_sorted = sorted(faturas, key=parse_mes)
             proxima = faturas_sorted[0]
             c["fatura"] = proxima["valor"]
+            c["mes_fatura"] = proxima["mes"]
             c["gastos"] = [{"desc": proxima["desc"], "valor": proxima["valor"],
                             "data": date.today().strftime("%d/%m/%Y")}]
             c["faturas"] = [f for f in faturas
@@ -681,7 +687,22 @@ class AbaCartoes:
             if eh_terceiro:
                 total_terceiros += fatura
             else:
-                total_fatura += fatura
+                # Só soma na fatura atual se for do mês atual ou anterior
+                mes_fat = c.get("mes_fatura", "")
+                fatura_no_mes = True
+                if mes_fat:
+                    try:
+                        from datetime import date as _date
+                        mf, af = mes_fat.strip().split("/")
+                        from datetime import date as _d
+                        hoje2 = _d.today()
+                        fat_ref = int(af) * 100 + int(mf)
+                        hoje_ref = hoje2.year * 100 + hoje2.month
+                        fatura_no_mes = fat_ref <= hoje_ref
+                    except:
+                        fatura_no_mes = True
+                if fatura_no_mes:
+                    total_fatura += fatura
             cor_uso = "#f87171" if (not eh_terceiro and uso >= 80) else ("#fbbf24" if (not eh_terceiro and uso >= 50) else (self.FG2 if eh_terceiro else "#ffffff"))
 
             # Card do cartão
@@ -777,7 +798,20 @@ class AbaCartoes:
         # Composição por cartão — opção 3 (barra proporcional + legenda)
         for w in self.card_fatura_total._composicao.winfo_children():
             w.destroy()
-        cartoes_fat = [(c, c.get("fatura", 0)) for c in cartoes if c.get("fatura", 0) > 0 and not c.get("terceiro")]
+        def _fatura_no_mes_atual(c):
+            mes_fat = c.get("mes_fatura", "")
+            if not mes_fat:
+                return True
+            try:
+                from datetime import date as _d
+                mf, af = mes_fat.strip().split("/")
+                hoje_ref = _d.today().year * 100 + _d.today().month
+                fat_ref  = int(af) * 100 + int(mf)
+                return fat_ref <= hoje_ref
+            except:
+                return True
+        cartoes_fat = [(c, c.get("fatura", 0)) for c in cartoes
+                       if c.get("fatura", 0) > 0 and not c.get("terceiro") and _fatura_no_mes_atual(c)]
         if cartoes_fat and total_fatura > 0:
             # Barra proporcional
             barra = tk.Frame(self.card_fatura_total._composicao, bg=self.CARD, height=5)
@@ -940,4 +974,3 @@ class AbaCartoes:
         def fmt(v): return ("R$ " + "{:,.2f}".format(v)).replace(",","X").replace(".",",").replace("X",".")
         self.lbl_simulacao.config(
             text="Parcela:  " + fmt(parcela) + "\nTotal pago:  " + fmt(valor))
-
