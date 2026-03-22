@@ -219,7 +219,7 @@ class App(tk.Tk, AbaLancamentos, AbaCartoes, AbaAnalises):
                     self._tab_lines[i].config(bg=self.BG)
 
         self._tab_lines = []
-        for i, label in enumerate(["  📋  Lançamentos  ", "  💳  Cartões de Crédito  ", "  📊  Análises  "]):
+        for i, label in enumerate(["   Lançamentos  ", "  Cartões de Crédito  ", "    Análises  "]):
             cell = tk.Frame(tab_bar, bg=self.BG)
             cell.grid(row=0, column=i, sticky="ew")
             b = tk.Button(cell, text=label, font=("Segoe UI", 10),
